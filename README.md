@@ -1,3 +1,4 @@
+
 # 🩸 Blood Test Report Analyzer
 
 A production-ready AI-powered blood test analysis system built with FastAPI, CrewAI, and Google Gemini. This application provides comprehensive medical analysis of blood test reports using advanced AI agents.
@@ -287,5 +288,15 @@ For issues and questions:
 - [ ] Mobile app support
 
 ---
+## 📸 Example Results
+
+### Celery Worker Processing
+![Celery Worker Processing]
+<img width="893" alt="image" src="https://github.com/user-attachments/assets/75b4134e-6b84-4271-93cf-0fbf50fac396" />
+
+
+### API Analysis Result
+![API Analysis Result]
+<img width="878" alt="image" src="https://github.com/user-attachments/assets/e0a98608-d422-472d-9505-03adffe4429b" />
 
 **Built with ❤️ using FastAPI, CrewAI, and Google Gemini**
