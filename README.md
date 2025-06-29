@@ -2,6 +2,29 @@
 
 A FastAPI-based application that uses Google Gemini AI to analyze blood test reports and provide comprehensive health insights. This project combines AI-powered analysis with medical knowledge to help users understand their blood test results.
 
+## 🏆 Bonus Features Implemented
+
+### 🚀 **Queue Worker Model (Redis + Celery)**
+- **Concurrent Request Handling**: Processes multiple blood test analyses simultaneously
+- **Background Processing**: Non-blocking API responses with task queuing
+- **Scalable Architecture**: Can handle high load with multiple workers
+- **Task Monitoring**: Real-time status tracking for each analysis
+- **Automatic Cleanup**: Background tasks for data maintenance
+
+### 🗄️ **Database Integration (SQLAlchemy)**
+- **Persistent Storage**: All analysis results stored in database
+- **User Management**: Ready for future user authentication
+- **Analysis History**: Complete audit trail of all processed reports
+- **Performance Metrics**: Processing time and file size tracking
+- **Data Cleanup**: Automatic removal of old records
+
+### 📊 **Enhanced API Endpoints**
+- `POST /analyze` - Queue analysis request (non-blocking)
+- `GET /status/{analysis_id}` - Check analysis progress and results
+- `GET /analyses` - List all analyses with filtering
+- `DELETE /analyses/{analysis_id}` - Remove analysis records
+- `GET /health` - Comprehensive system health check
+
 ## 🐛 Bugs Found and Fixed During Development
 
 ### 1. **Missing LLM Configuration**
@@ -69,6 +92,10 @@ A FastAPI-based application that uses Google Gemini AI to analyze blood test rep
 - **Health Recommendations**: Offers personalized health and lifestyle suggestions
 - **RESTful API**: Easy-to-use FastAPI endpoints for integration
 - **Secure**: Environment-based API key management
+- **Queue Worker Model**: Handles concurrent requests with Redis and Celery
+- **Database Integration**: Persistent storage with SQLAlchemy
+- **Real-time Status Tracking**: Monitor analysis progress
+- **Scalable Architecture**: Production-ready with multiple workers
 
 ## 🛠️ Technology Stack
 
@@ -77,11 +104,15 @@ A FastAPI-based application that uses Google Gemini AI to analyze blood test rep
 - **PDF Processing**: PyPDF2
 - **Document Processing**: LangChain
 - **Agent Framework**: CrewAI (for advanced multi-agent analysis)
+- **Queue System**: Redis + Celery
+- **Database**: SQLAlchemy (SQLite/PostgreSQL)
+- **Task Processing**: Background workers with concurrency
 
 ## 📋 Prerequisites
 
 - Python 3.8 or higher
 - Google Gemini API key
+- Redis server (for queue management)
 - pip (Python package manager)
 
 ## 🚀 Quick Start
@@ -114,33 +145,74 @@ Create a `.env` file in the project root:
 cp .env.example .env
 ```
 
-Edit the `.env` file and add your Gemini API key:
+Edit the `.env` file and add your configuration:
 
 ```env
+# Gemini API Configuration
 GEMINI_API_KEY=your_actual_gemini_api_key_here
+
+# Database Configuration
+DATABASE_URL=sqlite:///./blood_test_analyzer.db
+# For PostgreSQL: postgresql://user:password@localhost/blood_test_analyzer
+
+# Queue Configuration (Redis)
+CELERY_BROKER_URL=redis://localhost:6379/0
+CELERY_RESULT_BACKEND=redis://localhost:6379/0
 ```
 
 **Get your Gemini API key from:** [Google AI Studio](https://aistudio.google.com/app/apikey)
 
-### 5. Run the Application
+### 5. Start Redis Server
 
+**macOS:**
 ```bash
+brew install redis
+brew services start redis
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get install redis-server
+sudo systemctl start redis
+```
+
+**Windows:** Download and install Redis from [redis.io](https://redis.io/download)
+
+### 6. Start All Services
+
+**Option A: Use the startup script (Recommended)**
+```bash
+python start_services.py
+```
+
+**Option B: Start manually**
+```bash
+# Terminal 1: Start Celery worker
+celery -A celery_app worker --loglevel=info --concurrency=2
+
+# Terminal 2: Start FastAPI server
 python main.py
 ```
 
 The API will be available at: `http://localhost:8000`
 
-### 6. Test the API
+### 7. Test the API
 
 ```bash
 # Health check
-curl http://localhost:8000/
+curl http://localhost:8000/health
 
-# Analyze a blood test report
+# Submit analysis request
 curl -X POST "http://localhost:8000/analyze" \
   -H "Content-Type: multipart/form-data" \
   -F "file=@data/sample.pdf" \
   -F "query=What are the key findings in my blood test?"
+
+# Check analysis status (use the analysis_id from the response above)
+curl http://localhost:8000/status/{analysis_id}
+
+# List all analyses
+curl http://localhost:8000/analyses
 ```
 
 ## 📖 API Documentation
@@ -155,8 +227,19 @@ Health check endpoint
 }
 ```
 
+#### GET `/health`
+Comprehensive health check including database and queue status
+```json
+{
+  "api": "healthy",
+  "database": "healthy",
+  "queue": "healthy",
+  "timestamp": "2024-01-15T10:30:00.000Z"
+}
+```
+
 #### POST `/analyze`
-Analyze a blood test report
+Queue a blood test analysis request (non-blocking)
 
 **Parameters:**
 - `file` (required): PDF file containing blood test results
@@ -165,17 +248,64 @@ Analyze a blood test report
 **Response:**
 ```json
 {
-  "status": "success",
-  "query": "What are the key findings in my blood test?",
-  "analysis": "Detailed AI-generated analysis...",
+  "status": "accepted",
+  "analysis_id": "uuid-here",
+  "task_id": "celery-task-id",
+  "message": "Analysis request accepted. Use /status/{analysis_id} to check progress.",
   "file_processed": "blood_test_report.pdf"
 }
 ```
 
-**Error Response:**
+#### GET `/status/{analysis_id}`
+Get the status and results of an analysis
+
+**Response:**
 ```json
 {
-  "detail": "Error processing blood report: [error message]"
+  "analysis_id": "uuid-here",
+  "status": "completed",
+  "file_name": "blood_test_report.pdf",
+  "query": "What are the key findings?",
+  "created_at": "2024-01-15T10:30:00.000Z",
+  "processing_time": 15.5,
+  "file_size": 1024000,
+  "analysis": "Detailed AI-generated analysis..."
+}
+```
+
+#### GET `/analyses`
+List all analyses with optional filtering
+
+**Parameters:**
+- `skip` (optional): Number of records to skip (default: 0)
+- `limit` (optional): Number of records to return (default: 10)
+- `status` (optional): Filter by status (pending, processing, completed, failed)
+
+**Response:**
+```json
+{
+  "analyses": [
+    {
+      "id": "uuid-here",
+      "file_name": "blood_test_report.pdf",
+      "status": "completed",
+      "created_at": "2024-01-15T10:30:00.000Z",
+      "processing_time": 15.5
+    }
+  ],
+  "total": 25,
+  "skip": 0,
+  "limit": 10
+}
+```
+
+#### DELETE `/analyses/{analysis_id}`
+Delete an analysis record
+
+**Response:**
+```json
+{
+  "message": "Analysis deleted successfully"
 }
 ```
 
@@ -186,10 +316,13 @@ Analyze a blood test report
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `GEMINI_API_KEY` | Your Google Gemini API key | Yes |
+| `DATABASE_URL` | Database connection string | No (defaults to SQLite) |
+| `CELERY_BROKER_URL` | Redis broker URL | No (defaults to localhost) |
+| `CELERY_RESULT_BACKEND` | Redis result backend URL | No (defaults to localhost) |
 
 ### Model Configuration
 
-The application uses `gemini-1.5-flash` by default for faster responses. You can modify the model in `main.py`:
+The application uses `gemini-1.5-flash` by default for faster responses. You can modify the model in `celery_app.py`:
 
 ```python
 gemini_model = genai.GenerativeModel('gemini-1.5-flash')  # Fast
@@ -197,11 +330,22 @@ gemini_model = genai.GenerativeModel('gemini-1.5-flash')  # Fast
 gemini_model = genai.GenerativeModel('gemini-1.5-pro')    # More detailed
 ```
 
+### Queue Configuration
+
+- **Concurrency**: 2 workers by default (configurable)
+- **Task Timeout**: 30 minutes maximum
+- **Soft Timeout**: 25 minutes (graceful shutdown)
+- **Auto-cleanup**: Old records removed after 30 days
+
 ## 📁 Project Structure
 
 ```
 blood-test-analyser/
 ├── main.py              # FastAPI application entry point
+├── models.py            # Database models (SQLAlchemy)
+├── database.py          # Database configuration and session management
+├── celery_app.py        # Celery configuration and background tasks
+├── start_services.py    # Startup script for all services
 ├── agents.py            # CrewAI agent definitions
 ├── task.py              # Task definitions for agents
 ├── tools.py             # Custom tools for PDF processing
@@ -220,6 +364,58 @@ blood-test-analyser/
 - `.env` files are excluded from version control
 - Temporary files are automatically cleaned up
 - Input validation and error handling implemented
+- Database connections are properly managed
+- Background tasks have timeout limits
+
+## 🚀 Production Deployment
+
+### Docker Setup (Optional)
+
+Create a `docker-compose.yml` file:
+
+```yaml
+version: '3.8'
+services:
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+  
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - DATABASE_URL=postgresql://user:password@db/blood_test_analyzer
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+      - db
+  
+  worker:
+    build: .
+    command: celery -A celery_app worker --loglevel=info
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - DATABASE_URL=postgresql://user:password@db/blood_test_analyzer
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+      - db
+  
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_DB=blood_test_analyzer
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+```
 
 ## 🤝 Contributing
 
@@ -251,6 +447,8 @@ If you encounter any issues:
 1. Check the [Issues](https://github.com/Ajishi2/Bloodtest/issues) page
 2. Create a new issue with detailed information
 3. Ensure your API key is valid and has sufficient quota
+4. Verify Redis is running for queue functionality
+5. Check database connectivity
 
 ## 🔄 Updates
 
@@ -258,7 +456,8 @@ If you encounter any issues:
 - **v1.1.0**: Added CrewAI multi-agent framework support
 - **v1.2.0**: Enhanced PDF processing and error handling
 - **v1.3.0**: Fixed all major bugs and improved security
+- **v2.0.0**: Added Queue Worker Model and Database Integration
 
 ---
 
-**Made with ❤️ using FastAPI and Google Gemini AI**
+**Made with ❤️ using FastAPI, Google Gemini AI, Redis, and Celery**
