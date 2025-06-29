@@ -2,6 +2,65 @@
 
 A FastAPI-based application that uses Google Gemini AI to analyze blood test reports and provide comprehensive health insights. This project combines AI-powered analysis with medical knowledge to help users understand their blood test results.
 
+## 🐛 Bugs Found and Fixed During Development
+
+### 1. **Missing LLM Configuration**
+- **Bug**: `llm = llm` was undefined in `agents.py`
+- **Fix**: Added proper LLM initialization with environment variable support
+- **Impact**: System would crash on startup due to undefined variable
+
+### 2. **Missing PDFLoader Import**
+- **Bug**: `PDFLoader` was used in `tools.py` but not imported
+- **Fix**: Added `from langchain_community.document_loaders import PyPDFLoader`
+- **Impact**: PDF reading functionality would fail
+
+### 3. **Incorrect Tool Implementation**
+- **Bug**: Tools were defined as async functions but used synchronously
+- **Fix**: Converted tools to proper CrewAI BaseTool classes with `_run` method
+- **Impact**: Tool execution would fail due to async/sync mismatch
+
+### 4. **Missing Dependencies**
+- **Bug**: Several required packages missing from `requirements.txt`
+- **Fix**: Added missing dependencies:
+  - `python-dotenv==1.0.0`
+  - `uvicorn==0.27.1`
+  - `python-multipart==0.0.6`
+  - `langchain==0.1.0`
+  - `langchain-community==0.0.10`
+  - `pypdf==3.17.4`
+  - `google-generativeai==0.8.5`
+- **Impact**: Installation would fail and runtime errors would occur
+
+### 5. **Unprofessional Agent Descriptions**
+- **Bug**: Agents had unprofessional, potentially harmful descriptions
+- **Fix**: Rewritten all agents with professional, evidence-based medical personas
+- **Impact**: System would provide inaccurate or dangerous medical advice
+
+### 6. **Incorrect File Path Handling**
+- **Bug**: Main.py used hardcoded file path instead of uploaded file
+- **Fix**: Updated to use the actual uploaded file path
+- **Impact**: System would analyze wrong file or fail to process uploaded files
+
+### 7. **Hardcoded API Keys**
+- **Bug**: API keys were hardcoded in the source code
+- **Fix**: Moved to environment variables with proper validation
+- **Impact**: Security vulnerability and potential key exposure
+
+### 8. **Incorrect Gemini Model Name**
+- **Bug**: Used `gemini-pro` which doesn't exist in current API
+- **Fix**: Updated to `gemini-1.5-flash` and `gemini-1.5-pro`
+- **Impact**: API calls would fail with 404 errors
+
+### 9. **Missing Environment Configuration**
+- **Bug**: No `.env.example` or `.gitignore` for environment variables
+- **Fix**: Created proper environment setup files
+- **Impact**: Users couldn't set up the project properly
+
+### 10. **Limited Error Handling**
+- **Bug**: Poor error handling for API failures and file processing
+- **Fix**: Added comprehensive try-catch blocks and user-friendly error messages
+- **Impact**: System would crash on common errors
+
 ## 🚀 Features
 
 - **AI-Powered Analysis**: Uses Google Gemini AI for intelligent blood test interpretation
@@ -113,6 +172,13 @@ Analyze a blood test report
 }
 ```
 
+**Error Response:**
+```json
+{
+  "detail": "Error processing blood report: [error message]"
+}
+```
+
 ## 🔧 Configuration
 
 ### Environment Variables
@@ -191,6 +257,7 @@ If you encounter any issues:
 - **v1.0.0**: Initial release with Gemini AI integration
 - **v1.1.0**: Added CrewAI multi-agent framework support
 - **v1.2.0**: Enhanced PDF processing and error handling
+- **v1.3.0**: Fixed all major bugs and improved security
 
 ---
 
